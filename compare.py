@@ -9,7 +9,7 @@ import csv
 # Parameters
 grid_size = (20, 20)
 obstacle_ratio = 0.2
-num_runs = 100  # Chạy thử nghiệm 100 lần
+num_runs = 1000  # Chạy thử nghiệm 100 lần
 
 # Heuristic function for A* (Manhattan distance)
 def heuristic(a, b):

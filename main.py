@@ -4,18 +4,36 @@ import matplotlib.patches as patches
 import heapq
 import random
 import time
-import csv
 
 # Parameters
 grid_size = (20, 20)
 obstacle_ratio = 0.2
-num_runs = 100  # Chạy thử nghiệm 100 lần
 
-# Heuristic function for A* (Manhattan distance)
+# Generate grid
+grid = np.zeros(grid_size, dtype=int)
+
+# Random obstacles
+num_obstacles = int(grid_size[0] * grid_size[1] * obstacle_ratio)
+obstacle_indices = random.sample(range(grid_size[0] * grid_size[1]), num_obstacles)
+for idx in obstacle_indices:
+    x, y = divmod(idx, grid_size[1])
+    grid[x, y] = 1
+
+def random_free_cell():
+    while True:
+        x = random.randint(0, grid_size[0] - 1)
+        y = random.randint(0, grid_size[1] - 1)
+        if grid[x, y] == 0:
+            return (x, y)
+
+start = random_free_cell()
+goal = random_free_cell()
+while goal == start:
+    goal = random_free_cell()
+
 def heuristic(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
-# Reconstruct path from came_from dictionary
 def reconstruct_path(came_from, current):
     path = [current]
     while current in came_from:
@@ -24,7 +42,6 @@ def reconstruct_path(came_from, current):
     path.reverse()
     return path
 
-# A* Algorithm
 def astar(grid, start, goal):
     rows, cols = grid.shape
     open_set = []
@@ -49,7 +66,6 @@ def astar(grid, start, goal):
                     heapq.heappush(open_set, (f_score[neighbor], neighbor))
     return []
 
-# Dijkstra Algorithm
 def dijkstra(grid, start, goal):
     rows, cols = grid.shape
     pq = []
@@ -72,84 +88,60 @@ def dijkstra(grid, start, goal):
                     heapq.heappush(pq, (new_cost, neighbor))
     return []
 
-# Random start and goal
-def random_free_cell():
-    while True:
-        x = random.randint(0, grid_size[0] - 1)
-        y = random.randint(0, grid_size[1] - 1)
-        if grid[x, y] == 0:
-            return (x, y)
+# Run A*
+start_time = time.time()
+astar_path = astar(grid, start, goal)
+astar_time = time.time() - start_time
 
-# Run multiple trials
-astar_times = []
-dijkstra_times = []
-astar_lengths = []
-dijkstra_lengths = []
+# Run Dijkstra
+start_time = time.time()
+dijkstra_path = dijkstra(grid, start, goal)
+dijkstra_time = time.time() - start_time
 
-for run in range(num_runs):
-    # Reset grid and obstacles for each run
-    grid = np.zeros(grid_size, dtype=int)
-    num_obstacles = int(grid_size[0] * grid_size[1] * obstacle_ratio)
-    obstacle_indices = random.sample(range(grid_size[0] * grid_size[1]), num_obstacles)
-    for idx in obstacle_indices:
-        x, y = divmod(idx, grid_size[1])
-        grid[x, y] = 1
+# Print results
+print("=== Kết quả ===")
+print(f"Start: {start}")
+print(f"Goal:  {goal}")
+print(f"A*     → Thời gian: {astar_time:.6f}s | Độ dài đường đi: {len(astar_path)}")
+print(f"Dijkstra → Thời gian: {dijkstra_time:.6f}s | Độ dài đường đi: {len(dijkstra_path)}")
 
-    start = random_free_cell()
-    goal = random_free_cell()
-    while goal == start:
-        goal = random_free_cell()
+# Plot
+fig, ax = plt.subplots(figsize=(10, 10))
+for x in range(grid_size[0]):
+    for y in range(grid_size[1]):
+        if grid[x, y] == 1:
+            rect = patches.Rectangle((y, grid_size[0] - x - 1), 1, 1, facecolor='gray')
+            ax.add_patch(rect)
 
-    # Run A* and measure time
-    start_time = time.time()
-    astar_path = astar(grid, start, goal)
-    astar_time = time.time() - start_time
-    astar_times.append(astar_time)
-    astar_lengths.append(len(astar_path))
+for (x, y) in astar_path:
+    rect = patches.Rectangle((y, grid_size[0] - x - 1), 1, 1, facecolor='blue', alpha=0.5)
+    ax.add_patch(rect)
 
-    # Run Dijkstra and measure time
-    start_time = time.time()
-    dijkstra_path = dijkstra(grid, start, goal)
-    dijkstra_time = time.time() - start_time
-    dijkstra_times.append(dijkstra_time)
-    dijkstra_lengths.append(len(dijkstra_path))
+for (x, y) in dijkstra_path:
+    rect = patches.Rectangle((y, grid_size[0] - x - 1), 1, 1, facecolor='red', alpha=0.5)
+    ax.add_patch(rect)
 
-# Save results to CSV
-with open('pathfinding_results.csv', mode='w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerow(['Run', 'A* Time (s)', 'Dijkstra Time (s)', 'A* Path Length', 'Dijkstra Path Length'])
-    for i in range(num_runs):
-        writer.writerow([i + 1, astar_times[i], dijkstra_times[i], astar_lengths[i], dijkstra_lengths[i]])
+ax.scatter(start[1] + 0.5, grid_size[0] - start[0] - 0.5, color='green', s=200, label='Start')
+ax.scatter(goal[1] + 0.5, grid_size[0] - goal[0] - 0.5, color='purple', s=200, label='Goal')
 
-# Calculate averages
-avg_astar_time = np.mean(astar_times)
-avg_dijkstra_time = np.mean(dijkstra_times)
-avg_astar_length = np.mean(astar_lengths)
-avg_dijkstra_length = np.mean(dijkstra_lengths)
+for x in range(grid_size[0] + 1):
+    ax.plot([0, grid_size[1]], [x, x], 'k', lw=0.5)
+for y in range(grid_size[1] + 1):
+    ax.plot([y, y], [0, grid_size[0]], 'k', lw=0.5)
 
-print(f"A* average time: {avg_astar_time:.6f}s, average path length: {avg_astar_length}")
-print(f"Dijkstra average time: {avg_dijkstra_time:.6f}s, average path length: {avg_dijkstra_length}")
+legend_patches = [
+    patches.Patch(color='blue', alpha=0.5, label="A* Path"),
+    patches.Patch(color='red', alpha=0.5, label="Dijkstra Path"),
+    patches.Patch(color='gray', label="Obstacle"),
+    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='green', markersize=10, label="Start"),
+    plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='purple', markersize=10, label="Goal")
+]
 
-# Plot comparison
-plt.figure(figsize=(12, 6))
-
-# Time comparison plot
-plt.subplot(1, 2, 1)
-plt.plot(range(1, num_runs + 1), astar_times, label="A* Time", color='blue')
-plt.plot(range(1, num_runs + 1), dijkstra_times, label="Dijkstra Time", color='red')
-plt.xlabel('Run')
-plt.ylabel('Time (seconds)')
-plt.title('Time Comparison (A* vs Dijkstra)')
-plt.legend()
-
-# Path length comparison plot
-plt.subplot(1, 2, 2)
-plt.plot(range(1, num_runs + 1), astar_lengths, label="A* Path Length", color='blue')
-plt.plot(range(1, num_runs + 1), dijkstra_lengths, label="Dijkstra Path Length", color='red')
-plt.xlabel('Run')
-plt.ylabel('Path Length')
-plt.title('Path Length Comparison (A* vs Dijkstra)')
-plt.legend()
-
-plt.tight_layout()
+ax.legend(handles=legend_patches, loc='upper right')
+ax.set_xticks([])
+ax.set_yticks([])
+ax.set_xlim(0, grid_size[1])
+ax.set_ylim(0, grid_size[0])
+ax.set_aspect('equal')
+ax.set_title("A* vs Dijkstra Pathfinding (Random Map)")
 plt.show()
