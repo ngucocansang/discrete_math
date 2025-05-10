@@ -9,7 +9,7 @@ import csv
 # Parameters
 grid_size = (20, 20)
 obstacle_ratio = 0.2
-num_runs = 1000  # Chạy thử nghiệm 100 lần
+num_runs = 200  # Chạy thử nghiệm 100 lần
 
 # Heuristic function for A* (Manhattan distance)
 def heuristic(a, b):
@@ -114,12 +114,18 @@ for run in range(num_runs):
     dijkstra_times.append(dijkstra_time)
     dijkstra_lengths.append(len(dijkstra_path))
 
-# Save results to CSV
+# Save results to CSV (updated precision)
 with open('pathfinding_results.csv', mode='w', newline='') as file:
     writer = csv.writer(file)
     writer.writerow(['Run', 'A* Time (s)', 'Dijkstra Time (s)', 'A* Path Length', 'Dijkstra Path Length'])
     for i in range(num_runs):
-        writer.writerow([i + 1, astar_times[i], dijkstra_times[i], astar_lengths[i], dijkstra_lengths[i]])
+        writer.writerow([
+            i + 1,
+            f"{astar_times[i]:.10f}",
+            f"{dijkstra_times[i]:.10f}",
+            astar_lengths[i],
+            dijkstra_lengths[i]
+        ])
 
 # Calculate averages
 avg_astar_time = np.mean(astar_times)
